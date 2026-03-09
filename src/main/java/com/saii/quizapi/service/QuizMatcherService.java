@@ -1,9 +1,9 @@
 package com.saii.quizapi.service;
 
-import com.saii.quizapi.dto.MatchRequest;
-import com.saii.quizapi.dto.QuizQuestionDto;
-import com.saii.quizapi.dto.QuizResponse;
-import com.saii.quizapi.dto.TechPrerequisite;
+import com.saii.quizapi.dto.MatchRequestDTO;
+import com.saii.quizapi.dto.QuizQuestionDTO;
+import com.saii.quizapi.dto.QuizResponseDTO;
+import com.saii.quizapi.dto.TechPrerequisiteDTO;
 import com.saii.quizapi.entity.Question;
 import com.saii.quizapi.entity.QuizTemplate;
 import com.saii.quizapi.repository.QuestionRepository;
@@ -50,9 +50,9 @@ public class QuizMatcherService {
      * Récupère un quiz existant par son ID et le convertit en DTO.
      */
     @Transactional(readOnly = true)
-    public Optional<QuizResponse> findQuizById(final int quizId) {
+    public Optional<QuizResponseDTO> findQuizById(final int quizId) {
         return quizTemplateRepository.findById(quizId)
-                .map(this::toQuizResponse);
+                .map(this::toQuizResponseDTO);
     }
 
     /**
@@ -62,7 +62,7 @@ public class QuizMatcherService {
      * 3. Assemble un nouveau quiz template et le persiste
      */
     @Transactional
-    public QuizResponse matchOrAssemble(final MatchRequest request) {
+    public QuizResponseDTO matchOrAssemble(final MatchRequestDTO request) {
         final var collectedQuestions = collectQuestions(request.prerequisites(), request.effectiveMaxQuestions());
 
         if (collectedQuestions.isEmpty()) {
@@ -90,10 +90,10 @@ public class QuizMatcherService {
         log.info("Quiz assemblé : id={}, titre='{}', {} questions",
                 saved.getId(), saved.getTitle(), collectedQuestions.size());
 
-        return toQuizResponse(saved);
+        return toQuizResponseDTO(saved);
     }
 
-    private List<Question> collectQuestions(final List<TechPrerequisite> prerequisites,
+    private List<Question> collectQuestions(final List<TechPrerequisiteDTO> prerequisites,
                                             final int maxQuestions) {
         final var result = new ArrayList<Question>();
 
@@ -129,9 +129,9 @@ public class QuizMatcherService {
     /**
      * Détermine la séniorité cible du quiz : prend le niveau le plus élevé parmi les prérequis.
      */
-    private String resolveTargetSeniority(final List<TechPrerequisite> prerequisites) {
+    private String resolveTargetSeniority(final List<TechPrerequisiteDTO> prerequisites) {
         return prerequisites.stream()
-                .map(TechPrerequisite::seniority)
+                .map(TechPrerequisiteDTO::seniority)
                 .map(code -> seniorityLevelRepository.findByCode(code)
                         .map(sl -> new RankedSeniority(sl.getCode(), sl.getRank()))
                         .orElse(new RankedSeniority(code, (short) 0)))
@@ -140,11 +140,11 @@ public class QuizMatcherService {
                 .orElse(DEFAULT_SENIORITY);
     }
 
-    private QuizResponse toQuizResponse(final QuizTemplate quiz) {
+    private QuizResponseDTO toQuizResponseDTO(final QuizTemplate quiz) {
         final var questionDtos = quiz.getQuizQuestions().stream()
                 .map(link -> {
                     final var q = link.getQuestion();
-                    return new QuizQuestionDto(
+                    return new QuizQuestionDTO(
                             link.getPosition(),
                             q.getTechnology().getName(),
                             q.getSeniorityLevel(),
@@ -158,7 +158,7 @@ public class QuizMatcherService {
                 })
                 .toList();
 
-        return new QuizResponse(
+        return new QuizResponseDTO(
                 quiz.getId(),
                 quiz.getTitle(),
                 quiz.getDescription(),

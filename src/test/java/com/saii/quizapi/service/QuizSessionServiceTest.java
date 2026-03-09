@@ -1,8 +1,8 @@
 package com.saii.quizapi.service;
 
 import com.saii.quizapi.TestFixtures.QuestionParams;
-import com.saii.quizapi.dto.CreateSessionRequest;
-import com.saii.quizapi.dto.SubmitAnswerRequest;
+import com.saii.quizapi.dto.CreateSessionRequestDTO;
+import com.saii.quizapi.dto.SubmitAnswerRequestDTO;
 import com.saii.quizapi.entity.AnswerType;
 import com.saii.quizapi.entity.Question;
 import com.saii.quizapi.entity.QuizSession;
@@ -83,7 +83,7 @@ class QuizSessionServiceTest {
                     return session;
                 });
 
-        final var request = new CreateSessionRequest(1, "Alice Dupont", "alice@example.com");
+        final var request = new CreateSessionRequestDTO(1, "Alice Dupont", "alice@example.com");
         final var response = service.createSession(request);
 
         assertThat(response.id()).isEqualTo(100);
@@ -98,7 +98,7 @@ class QuizSessionServiceTest {
     void should_throw_when_quiz_not_found_for_session() {
         when(quizTemplateRepository.findById(999)).thenReturn(Optional.empty());
 
-        final var request = new CreateSessionRequest(999, "Bob", "bob@example.com");
+        final var request = new CreateSessionRequestDTO(999, "Bob", "bob@example.com");
 
         assertThatThrownBy(() -> service.createSession(request))
                 .isInstanceOf(QuizNotFoundException.class)
@@ -146,7 +146,7 @@ class QuizSessionServiceTest {
         when(answerRepository.save(any(QuizSessionAnswer.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        final var request = new SubmitAnswerRequest(10, "Ma réponse");
+        final var request = new SubmitAnswerRequestDTO(10, "Ma réponse");
         service.submitAnswer(session.getToken(), request);
 
         assertThat(session.getStatus().getValue()).isEqualTo("in_progress");
@@ -168,7 +168,7 @@ class QuizSessionServiceTest {
         when(answerRepository.save(any(QuizSessionAnswer.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        final var request = new SubmitAnswerRequest(10, "Nouvelle réponse");
+        final var request = new SubmitAnswerRequestDTO(10, "Nouvelle réponse");
         service.submitAnswer(session.getToken(), request);
 
         assertThat(existingAnswer.getCandidateAnswer()).isEqualTo("Nouvelle réponse");
@@ -183,7 +183,7 @@ class QuizSessionServiceTest {
         when(sessionRepository.findByTokenWithQuizAndQuestions(session.getToken()))
                 .thenReturn(Optional.of(session));
 
-        final var request = new SubmitAnswerRequest(10, "Réponse tardive");
+        final var request = new SubmitAnswerRequestDTO(10, "Réponse tardive");
 
         assertThatThrownBy(() -> service.submitAnswer(session.getToken(), request))
                 .isInstanceOf(SessionStateException.class)
@@ -289,7 +289,7 @@ class QuizSessionServiceTest {
                 .thenReturn(Optional.of(session));
         when(answerRepository.findBySessionIdAndQuestionId(100, 999)).thenReturn(Optional.empty());
 
-        final var request = new SubmitAnswerRequest(999, "Réponse");
+        final var request = new SubmitAnswerRequestDTO(999, "Réponse");
 
         assertThatThrownBy(() -> service.submitAnswer(session.getToken(), request))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -351,7 +351,7 @@ class QuizSessionServiceTest {
         when(sessionRepository.save(any(QuizSession.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        final var request = new SubmitAnswerRequest(10, "Réponse tardive");
+        final var request = new SubmitAnswerRequestDTO(10, "Réponse tardive");
 
         assertThatThrownBy(() -> expiredService.submitAnswer(session.getToken(), request))
                 .isInstanceOf(SessionStateException.class)

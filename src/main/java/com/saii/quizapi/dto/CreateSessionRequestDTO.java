@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
  * Peut etre appelee directement avec un quizId,
  * ou indirectement via /match qui cree le quiz puis la session.
  */
-public record CreateSessionRequest(
+public record CreateSessionRequestDTO(
         @NotNull Integer quizId,
         @NotBlank @Size(max = 255) String candidateName,
         @NotBlank @Email @Size(max = 255) String candidateEmail

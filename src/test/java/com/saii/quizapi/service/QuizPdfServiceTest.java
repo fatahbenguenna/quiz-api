@@ -1,7 +1,7 @@
 package com.saii.quizapi.service;
 
-import com.saii.quizapi.dto.QuizQuestionDto;
-import com.saii.quizapi.dto.QuizResponse;
+import com.saii.quizapi.dto.QuizQuestionDTO;
+import com.saii.quizapi.dto.QuizResponseDTO;
 import org.junit.jupiter.api.Test;
 
 import java.time.OffsetDateTime;
@@ -16,7 +16,7 @@ class QuizPdfServiceTest {
     @Test
     void should_generate_valid_pdf_bytes() {
         // Given
-        final var quiz = new QuizResponse(
+        final var quiz = new QuizResponseDTO(
                 1,
                 "Quiz Java Confirmé",
                 "Quiz de test pour le service PDF",
@@ -25,7 +25,7 @@ class QuizPdfServiceTest {
                 "java-matcher",
                 OffsetDateTime.now(),
                 List.of(
-                        new QuizQuestionDto(
+                        new QuizQuestionDTO(
                                 1, "Java", "confirme", "21",
                                 "Qu'est-ce que le polymorphisme ?",
                                 "Le polymorphisme permet à un objet de prendre plusieurs formes.",
@@ -33,7 +33,7 @@ class QuizPdfServiceTest {
                                 (short) 3,
                                 "code"
                         ),
-                        new QuizQuestionDto(
+                        new QuizQuestionDTO(
                                 2, "Spring Boot", "confirme", "3.2",
                                 "Quel est le rôle de @SpringBootApplication ?",
                                 "Combine @Configuration, @EnableAutoConfiguration et @ComponentScan.",
@@ -57,7 +57,7 @@ class QuizPdfServiceTest {
     @Test
     void should_generate_pdf_with_empty_questions() {
         // Given
-        final var quiz = new QuizResponse(
+        final var quiz = new QuizResponseDTO(
                 2, "Quiz vide", null, "junior",
                 15, "ai", OffsetDateTime.now(), List.of()
         );

@@ -3,7 +3,7 @@ package com.saii.quizapi.dto;
 /**
  * Question d'un quiz — vue simplifiée pour le JSON / PDF.
  */
-public record QuizQuestionDto(
+public record QuizQuestionDTO(
         int position,
         String technology,
         String seniorityLevel,

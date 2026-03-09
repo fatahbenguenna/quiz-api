@@ -16,9 +16,9 @@ import java.util.List;
  * @param prerequisites liste des prérequis techniques
  * @param maxQuestions  nombre max de questions souhaitées (défaut : 20)
  */
-public record MatchRequest(
+public record MatchRequestDTO(
         @NotBlank @Size(max = 500) String jobTitle,
-        @NotEmpty @Valid List<TechPrerequisite> prerequisites,
+        @NotEmpty @Valid List<TechPrerequisiteDTO> prerequisites,
         @Positive Integer maxQuestions
 ) {
     private static final int DEFAULT_MAX_QUESTIONS = 20;

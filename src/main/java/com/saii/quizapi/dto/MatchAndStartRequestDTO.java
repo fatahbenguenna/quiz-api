@@ -18,18 +18,18 @@ import java.util.List;
  * volontairement (limitations des records + validation Jakarta).
  * La méthode {@link #toMatchRequest()} fournit la conversion sans duplication de logique.
  */
-public record MatchAndStartRequest(
+public record MatchAndStartRequestDTO(
         @NotBlank @Size(max = 500) String jobTitle,
-        @NotEmpty @Valid List<TechPrerequisite> prerequisites,
+        @NotEmpty @Valid List<TechPrerequisiteDTO> prerequisites,
         @Positive Integer maxQuestions,
         @NotBlank @Size(max = 255) String candidateName,
         @NotBlank @Email @Size(max = 255) String candidateEmail
 ) {
     /**
-     * Convertit la partie matching en {@link MatchRequest},
+     * Convertit la partie matching en {@link MatchRequestDTO},
      * évitant la duplication de logique (effectiveMaxQuestions, etc.).
      */
-    public MatchRequest toMatchRequest() {
-        return new MatchRequest(jobTitle, prerequisites, maxQuestions);
+    public MatchRequestDTO toMatchRequest() {
+        return new MatchRequestDTO(jobTitle, prerequisites, maxQuestions);
     }
 }

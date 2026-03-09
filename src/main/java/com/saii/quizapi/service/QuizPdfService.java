@@ -10,8 +10,8 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
-import com.saii.quizapi.dto.QuizQuestionDto;
-import com.saii.quizapi.dto.QuizResponse;
+import com.saii.quizapi.dto.QuizQuestionDTO;
+import com.saii.quizapi.dto.QuizResponseDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -38,7 +38,7 @@ public class QuizPdfService {
      *
      * @return les bytes du PDF prêt à être envoyé en réponse HTTP
      */
-    public byte[] generate(final QuizResponse quiz) {
+    public byte[] generate(final QuizResponseDTO quiz) {
         final var out = new ByteArrayOutputStream();
         final var document = new Document(PageSize.A4, 40, 40, 50, 40);
 
@@ -57,7 +57,7 @@ public class QuizPdfService {
         return out.toByteArray();
     }
 
-    private void addHeader(final Document document, final QuizResponse quiz) {
+    private void addHeader(final Document document, final QuizResponseDTO quiz) {
         final var title = new Paragraph(quiz.title(), TITLE_FONT);
         title.setAlignment(Element.ALIGN_CENTER);
         title.setSpacingAfter(8);
@@ -77,13 +77,13 @@ public class QuizPdfService {
         }
     }
 
-    private void addQuestions(final Document document, final QuizResponse quiz) {
+    private void addQuestions(final Document document, final QuizResponseDTO quiz) {
         for (final var q : quiz.questions()) {
             addQuestionBlock(document, q);
         }
     }
 
-    private void addQuestionBlock(final Document document, final QuizQuestionDto q) {
+    private void addQuestionBlock(final Document document, final QuizQuestionDTO q) {
         final var table = new PdfPTable(1);
         table.setWidthPercentage(100);
         table.setSpacingBefore(10);
@@ -93,7 +93,7 @@ public class QuizPdfService {
         document.add(table);
     }
 
-    private PdfPCell buildQuestionHeader(final QuizQuestionDto q) {
+    private PdfPCell buildQuestionHeader(final QuizQuestionDTO q) {
         final var versionSuffix = q.targetVersion() != null ? " " + q.targetVersion() : "";
         final var headerText = String.format("Q%d — %s%s (%s)",
                 q.position(), q.technology(), versionSuffix, q.seniorityLevel());
@@ -105,7 +105,7 @@ public class QuizPdfService {
         return cell;
     }
 
-    private PdfPCell buildQuestionBody(final QuizQuestionDto q) {
+    private PdfPCell buildQuestionBody(final QuizQuestionDTO q) {
         final var cell = new PdfPCell();
         cell.setBorderWidth(0);
         cell.setBackgroundColor(LIGHT_BG);
@@ -130,7 +130,7 @@ public class QuizPdfService {
         return cell;
     }
 
-    private void addFooter(final Document document, final QuizResponse quiz) {
+    private void addFooter(final Document document, final QuizResponseDTO quiz) {
         final var footer = new Paragraph(
                 String.format("Quiz #%d — Généré par SAII (%s)", quiz.id(), quiz.createdBy()),
                 SUBTITLE_FONT

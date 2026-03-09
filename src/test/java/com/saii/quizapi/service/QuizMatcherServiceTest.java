@@ -1,7 +1,7 @@
 package com.saii.quizapi.service;
 
-import com.saii.quizapi.dto.MatchRequest;
-import com.saii.quizapi.dto.TechPrerequisite;
+import com.saii.quizapi.dto.MatchRequestDTO;
+import com.saii.quizapi.dto.TechPrerequisiteDTO;
 import com.saii.quizapi.entity.QuizTemplate;
 import com.saii.quizapi.repository.QuestionRepository;
 import com.saii.quizapi.repository.QuizTemplateRepository;
@@ -54,9 +54,9 @@ class QuizMatcherServiceTest {
 
     @Test
     void should_throw_when_no_questions_found() {
-        final var request = new MatchRequest(
+        final var request = new MatchRequestDTO(
                 "Dev Java Senior",
-                List.of(new TechPrerequisite("Kotlin", "senior")),
+                List.of(new TechPrerequisiteDTO("Kotlin", "senior")),
                 null
         );
         when(technologyRepository.findByNameOrAlias("Kotlin")).thenReturn(Optional.empty());
@@ -83,9 +83,9 @@ class QuizMatcherServiceTest {
                     return saved;
                 });
 
-        final var request = new MatchRequest(
+        final var request = new MatchRequestDTO(
                 "Dev Java Confirmé",
-                List.of(new TechPrerequisite("Java", "confirme")),
+                List.of(new TechPrerequisiteDTO("Java", "confirme")),
                 null
         );
 
@@ -118,9 +118,9 @@ class QuizMatcherServiceTest {
                     return saved;
                 });
 
-        final var request = new MatchRequest(
+        final var request = new MatchRequestDTO(
                 "DevOps Senior",
-                List.of(new TechPrerequisite("Docker", "senior")),
+                List.of(new TechPrerequisiteDTO("Docker", "senior")),
                 null
         );
 
@@ -151,9 +151,9 @@ class QuizMatcherServiceTest {
                     return saved;
                 });
 
-        final var request = new MatchRequest(
+        final var request = new MatchRequestDTO(
                 "Dev Spring",
-                List.of(new TechPrerequisite("Spring", "confirme")),
+                List.of(new TechPrerequisiteDTO("Spring", "confirme")),
                 2
         );
 

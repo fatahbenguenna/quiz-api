@@ -5,7 +5,7 @@ import java.time.OffsetDateTime;
 /**
  * Reponse apres creation d'une session — contient le token d'acces.
  */
-public record SessionResponse(
+public record SessionResponseDTO(
         int id,
         String token,
         String sessionUrl,
