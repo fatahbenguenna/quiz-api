@@ -1,44 +1,58 @@
 package com.saii.quizapi.service;
 
-import com.saii.quizapi.dto.MatchRequest;
-import com.saii.quizapi.dto.QuizQuestionDto;
-import com.saii.quizapi.dto.QuizResponse;
-import com.saii.quizapi.dto.TechPrerequisite;
+import com.saii.quizapi.dto.MatchRequestDTO;
+import com.saii.quizapi.dto.QuizQuestionDTO;
+import com.saii.quizapi.dto.QuizResponseDTO;
+import com.saii.quizapi.dto.TechPrerequisiteDTO;
 import com.saii.quizapi.entity.Question;
 import com.saii.quizapi.entity.QuizTemplate;
-import com.saii.quizapi.entity.Technology;
 import com.saii.quizapi.repository.QuestionRepository;
 import com.saii.quizapi.repository.QuizTemplateRepository;
 import com.saii.quizapi.repository.SeniorityLevelRepository;
 import com.saii.quizapi.repository.TechnologyRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class QuizMatcherService {
 
+    static final String CREATED_BY_MATCHER = "java-matcher";
+    static final String DEFAULT_SENIORITY = "confirme";
     private static final int DEFAULT_DURATION_MINUTES = 30;
 
     private final TechnologyRepository technologyRepository;
     private final QuestionRepository questionRepository;
     private final QuizTemplateRepository quizTemplateRepository;
     private final SeniorityLevelRepository seniorityLevelRepository;
+    private final Clock clock;
+
+    public QuizMatcherService(final TechnologyRepository technologyRepository,
+                              final QuestionRepository questionRepository,
+                              final QuizTemplateRepository quizTemplateRepository,
+                              final SeniorityLevelRepository seniorityLevelRepository,
+                              final Clock clock) {
+        this.technologyRepository = technologyRepository;
+        this.questionRepository = questionRepository;
+        this.quizTemplateRepository = quizTemplateRepository;
+        this.seniorityLevelRepository = seniorityLevelRepository;
+        this.clock = clock;
+    }
 
     /**
      * Récupère un quiz existant par son ID et le convertit en DTO.
      */
     @Transactional(readOnly = true)
-    public Optional<QuizResponse> findQuizById(final int quizId) {
+    public Optional<QuizResponseDTO> findQuizById(final int quizId) {
         return quizTemplateRepository.findById(quizId)
-                .map(this::toQuizResponse);
+                .map(this::toQuizResponseDTO);
     }
 
     /**
@@ -48,7 +62,7 @@ public class QuizMatcherService {
      * 3. Assemble un nouveau quiz template et le persiste
      */
     @Transactional
-    public QuizResponse matchOrAssemble(final MatchRequest request) {
+    public QuizResponseDTO matchOrAssemble(final MatchRequestDTO request) {
         final var collectedQuestions = collectQuestions(request.prerequisites(), request.effectiveMaxQuestions());
 
         if (collectedQuestions.isEmpty()) {
@@ -62,7 +76,9 @@ public class QuizMatcherService {
                 request.jobTitle(),
                 "Quiz assemblé automatiquement par le matcher Java",
                 targetSeniority,
-                DEFAULT_DURATION_MINUTES
+                DEFAULT_DURATION_MINUTES,
+                CREATED_BY_MATCHER,
+                OffsetDateTime.now(clock)
         );
 
         short position = 1;
@@ -74,10 +90,10 @@ public class QuizMatcherService {
         log.info("Quiz assemblé : id={}, titre='{}', {} questions",
                 saved.getId(), saved.getTitle(), collectedQuestions.size());
 
-        return toQuizResponse(saved);
+        return toQuizResponseDTO(saved);
     }
 
-    private List<Question> collectQuestions(final List<TechPrerequisite> prerequisites,
+    private List<Question> collectQuestions(final List<TechPrerequisiteDTO> prerequisites,
                                             final int maxQuestions) {
         final var result = new ArrayList<Question>();
 
@@ -113,22 +129,22 @@ public class QuizMatcherService {
     /**
      * Détermine la séniorité cible du quiz : prend le niveau le plus élevé parmi les prérequis.
      */
-    private String resolveTargetSeniority(final List<TechPrerequisite> prerequisites) {
+    private String resolveTargetSeniority(final List<TechPrerequisiteDTO> prerequisites) {
         return prerequisites.stream()
-                .map(TechPrerequisite::seniority)
+                .map(TechPrerequisiteDTO::seniority)
                 .map(code -> seniorityLevelRepository.findByCode(code)
                         .map(sl -> new RankedSeniority(sl.getCode(), sl.getRank()))
                         .orElse(new RankedSeniority(code, (short) 0)))
                 .max((a, b) -> Short.compare(a.rank(), b.rank()))
                 .map(RankedSeniority::code)
-                .orElse("confirme");
+                .orElse(DEFAULT_SENIORITY);
     }
 
-    private QuizResponse toQuizResponse(final QuizTemplate quiz) {
+    private QuizResponseDTO toQuizResponseDTO(final QuizTemplate quiz) {
         final var questionDtos = quiz.getQuizQuestions().stream()
                 .map(link -> {
                     final var q = link.getQuestion();
-                    return new QuizQuestionDto(
+                    return new QuizQuestionDTO(
                             link.getPosition(),
                             q.getTechnology().getName(),
                             q.getSeniorityLevel(),
@@ -136,12 +152,13 @@ public class QuizMatcherService {
                             q.getQuestion(),
                             q.getAnswer(),
                             q.getExplanation(),
-                            q.getDifficultyScore()
+                            q.getDifficultyScore(),
+                            q.getAnswerType().getValue()
                     );
                 })
                 .toList();
 
-        return new QuizResponse(
+        return new QuizResponseDTO(
                 quiz.getId(),
                 quiz.getTitle(),
                 quiz.getDescription(),

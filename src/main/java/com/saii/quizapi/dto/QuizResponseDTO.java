@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * Réponse JSON représentant un quiz complet.
  */
-public record QuizResponse(
+public record QuizResponseDTO(
         int id,
         String title,
         String description,
@@ -14,6 +14,6 @@ public record QuizResponse(
         int durationMinutes,
         String createdBy,
         OffsetDateTime createdAt,
-        List<QuizQuestionDto> questions
+        List<QuizQuestionDTO> questions
 ) {
 }

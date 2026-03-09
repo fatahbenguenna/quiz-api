@@ -1,9 +1,9 @@
 package com.saii.quizapi.controller;
 
-import com.saii.quizapi.dto.MatchAndStartRequest;
-import com.saii.quizapi.dto.MatchRequest;
-import com.saii.quizapi.dto.QuizResponse;
-import com.saii.quizapi.dto.SessionResponse;
+import com.saii.quizapi.dto.MatchAndStartRequestDTO;
+import com.saii.quizapi.dto.MatchRequestDTO;
+import com.saii.quizapi.dto.QuizResponseDTO;
+import com.saii.quizapi.dto.SessionResponseDTO;
 import com.saii.quizapi.service.QuizMatcherService;
 import com.saii.quizapi.service.QuizNotFoundException;
 import com.saii.quizapi.service.QuizPdfService;
@@ -34,7 +34,7 @@ public class QuizController {
      * GET /api/quiz/{id} — Récupère un quiz existant en JSON.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<QuizResponse> getQuiz(@PathVariable final int id) {
+    public ResponseEntity<QuizResponseDTO> getQuiz(@PathVariable final int id) {
         return matcherService.findQuizById(id)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new QuizNotFoundException("Quiz introuvable : id=" + id));
@@ -57,8 +57,8 @@ public class QuizController {
      * l'API assemble un quiz et retourne sa représentation JSON.
      */
     @PostMapping("/match")
-    public ResponseEntity<QuizResponse> matchQuiz(
-            @Valid @RequestBody final MatchRequest request) {
+    public ResponseEntity<QuizResponseDTO> matchQuiz(
+            @Valid @RequestBody final MatchRequestDTO request) {
         final var quiz = matcherService.matchOrAssemble(request);
         return ResponseEntity.ok(quiz);
     }
@@ -68,7 +68,7 @@ public class QuizController {
      */
     @PostMapping("/match/pdf")
     public ResponseEntity<byte[]> matchQuizPdf(
-            @Valid @RequestBody final MatchRequest request) {
+            @Valid @RequestBody final MatchRequestDTO request) {
         final var quiz = matcherService.matchOrAssemble(request);
         return buildPdfResponse(quiz);
     }
@@ -78,13 +78,13 @@ public class QuizController {
      * Assemble le quiz, crée la session et retourne l'URL d'accès pour le candidat.
      */
     @PostMapping("/match/session")
-    public ResponseEntity<SessionResponse> matchAndCreateSession(
-            @Valid @RequestBody final MatchAndStartRequest request) {
+    public ResponseEntity<SessionResponseDTO> matchAndCreateSession(
+            @Valid @RequestBody final MatchAndStartRequestDTO request) {
         final var session = sessionService.matchAndCreateSession(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(session);
     }
 
-    private ResponseEntity<byte[]> buildPdfResponse(final QuizResponse quiz) {
+    private ResponseEntity<byte[]> buildPdfResponse(final QuizResponseDTO quiz) {
         final var pdfBytes = pdfService.generate(quiz);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=quiz-" + quiz.id() + ".pdf")

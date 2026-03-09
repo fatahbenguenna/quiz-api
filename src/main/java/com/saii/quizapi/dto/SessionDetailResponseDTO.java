@@ -8,7 +8,7 @@ import java.util.List;
  * Utilisee par l'app standalone pour afficher le quiz au candidat
  * et la revue a l'interviewer.
  */
-public record SessionDetailResponse(
+public record SessionDetailResponseDTO(
         int sessionId,
         String token,
         String status,
@@ -37,6 +37,7 @@ public record SessionDetailResponse(
             String expectedAnswer,
             String explanation,
             short difficultyScore,
+            String answerType,
             String candidateAnswer
     ) {
     }

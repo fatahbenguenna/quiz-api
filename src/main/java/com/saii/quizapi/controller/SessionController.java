@@ -1,9 +1,9 @@
 package com.saii.quizapi.controller;
 
-import com.saii.quizapi.dto.CreateSessionRequest;
-import com.saii.quizapi.dto.SessionDetailResponse;
-import com.saii.quizapi.dto.SessionResponse;
-import com.saii.quizapi.dto.SubmitAnswerRequest;
+import com.saii.quizapi.dto.CreateSessionRequestDTO;
+import com.saii.quizapi.dto.SessionDetailResponseDTO;
+import com.saii.quizapi.dto.SessionResponseDTO;
+import com.saii.quizapi.dto.SubmitAnswerRequestDTO;
 import com.saii.quizapi.service.QuizSessionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +28,8 @@ public class SessionController {
      * Retourne un token et une URL d'accès invocable par le progiciel RH.
      */
     @PostMapping
-    public ResponseEntity<SessionResponse> createSession(
-            @Valid @RequestBody final CreateSessionRequest request) {
+    public ResponseEntity<SessionResponseDTO> createSession(
+            @Valid @RequestBody final CreateSessionRequestDTO request) {
         final var session = sessionService.createSession(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(session);
     }
@@ -39,7 +39,7 @@ public class SessionController {
      * Les réponses attendues ne sont visibles que quand la session est terminée.
      */
     @GetMapping("/{token}")
-    public ResponseEntity<SessionDetailResponse> getSession(
+    public ResponseEntity<SessionDetailResponseDTO> getSession(
             @PathVariable final String token) {
         final var detail = sessionService.getSessionByToken(token);
         return ResponseEntity.ok(detail);
@@ -50,7 +50,7 @@ public class SessionController {
      * Le candidat clique sur "Commencer le quiz".
      */
     @PostMapping("/{token}/start")
-    public ResponseEntity<SessionDetailResponse> startSession(
+    public ResponseEntity<SessionDetailResponseDTO> startSession(
             @PathVariable final String token) {
         final var detail = sessionService.startSession(token);
         return ResponseEntity.ok(detail);
@@ -63,7 +63,7 @@ public class SessionController {
     @PostMapping("/{token}/answers")
     public ResponseEntity<Void> submitAnswer(
             @PathVariable final String token,
-            @Valid @RequestBody final SubmitAnswerRequest request) {
+            @Valid @RequestBody final SubmitAnswerRequestDTO request) {
         sessionService.submitAnswer(token, request);
         return ResponseEntity.noContent().build();
     }
@@ -73,7 +73,7 @@ public class SessionController {
      * Le candidat clique sur "Terminer" ou le timer a expiré.
      */
     @PostMapping("/{token}/complete")
-    public ResponseEntity<SessionDetailResponse> completeSession(
+    public ResponseEntity<SessionDetailResponseDTO> completeSession(
             @PathVariable final String token) {
         final var detail = sessionService.completeSession(token);
         return ResponseEntity.ok(detail);
