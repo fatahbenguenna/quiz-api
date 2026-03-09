@@ -2,13 +2,11 @@ package com.saii.quizapi.service;
 
 import com.saii.quizapi.dto.CreateSessionRequest;
 import com.saii.quizapi.dto.MatchAndStartRequest;
-import com.saii.quizapi.dto.MatchRequest;
 import com.saii.quizapi.dto.SessionDetailResponse;
 import com.saii.quizapi.dto.SessionResponse;
 import com.saii.quizapi.dto.SubmitAnswerRequest;
 import com.saii.quizapi.entity.QuizSession;
 import com.saii.quizapi.entity.QuizSessionAnswer;
-import com.saii.quizapi.entity.SessionStatus;
 import com.saii.quizapi.repository.QuizSessionAnswerRepository;
 import com.saii.quizapi.repository.QuizSessionRepository;
 import com.saii.quizapi.repository.QuizTemplateRepository;
@@ -17,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.stream.Collectors;
 
@@ -28,6 +27,7 @@ public class QuizSessionService {
     private final QuizSessionAnswerRepository answerRepository;
     private final QuizTemplateRepository quizTemplateRepository;
     private final QuizMatcherService matcherService;
+    private final Clock clock;
     private final String quizAppBaseUrl;
 
     public QuizSessionService(
@@ -35,11 +35,13 @@ public class QuizSessionService {
             final QuizSessionAnswerRepository answerRepository,
             final QuizTemplateRepository quizTemplateRepository,
             final QuizMatcherService matcherService,
+            final Clock clock,
             @Value("${saii.quiz-app.base-url:http://localhost:4200}") final String quizAppBaseUrl) {
         this.sessionRepository = sessionRepository;
         this.answerRepository = answerRepository;
         this.quizTemplateRepository = quizTemplateRepository;
         this.matcherService = matcherService;
+        this.clock = clock;
         this.quizAppBaseUrl = quizAppBaseUrl;
     }
 
@@ -53,7 +55,7 @@ public class QuizSessionService {
                 .orElseThrow(() -> new QuizNotFoundException(
                         "Quiz introuvable : id=" + request.quizId()));
 
-        final var session = new QuizSession(quiz, request.candidateName(), request.candidateEmail());
+        final var session = new QuizSession(quiz, request.candidateName(), request.candidateEmail(), now());
         final var saved = sessionRepository.save(session);
 
         log.info("Session créée : id={}, quiz={}", saved.getId(), quiz.getId());
@@ -67,11 +69,7 @@ public class QuizSessionService {
      */
     @Transactional
     public SessionResponse matchAndCreateSession(final MatchAndStartRequest request) {
-        final var matchRequest = new MatchRequest(
-                request.jobTitle(),
-                request.prerequisites(),
-                request.maxQuestions()
-        );
+        final var matchRequest = request.toMatchRequest();
         final var quiz = matcherService.matchOrAssemble(matchRequest);
 
         final var sessionRequest = new CreateSessionRequest(
@@ -85,30 +83,24 @@ public class QuizSessionService {
     /**
      * Récupère le détail complet d'une session par son token.
      * Auto-complète la session si le temps imparti est dépassé.
-     * Les réponses attendues ne sont visibles que quand la session est terminée (vue interviewer).
      */
     @Transactional
     public SessionDetailResponse getSessionByToken(final String token) {
         final var session = findByTokenEagerOrThrow(token);
-        autoCompleteIfExpired(session);
+        if (session.autoCompleteIfExpired(now())) {
+            sessionRepository.save(session);
+            log.info("Session auto-complétée (expiration) : id={}", session.getId());
+        }
         return toSessionDetail(session);
     }
 
     /**
      * Démarre une session : passe de PENDING à IN_PROGRESS.
-     * Le candidat clique sur "Commencer" dans l'app standalone.
      */
     @Transactional
     public SessionDetailResponse startSession(final String token) {
         final var session = findByTokenEagerOrThrow(token);
-
-        if (session.getStatus() != SessionStatus.PENDING) {
-            throw new SessionStateException(
-                    "Impossible de démarrer la session : état actuel = " + session.getStatus().getValue());
-        }
-
-        session.setStatus(SessionStatus.IN_PROGRESS);
-        session.setStartedAt(OffsetDateTime.now());
+        session.start(now());
         sessionRepository.save(session);
 
         log.info("Session démarrée : id={}", session.getId());
@@ -123,79 +115,53 @@ public class QuizSessionService {
     public void submitAnswer(final String token, final SubmitAnswerRequest request) {
         final var session = findByTokenEagerOrThrow(token);
 
-        autoCompleteIfExpired(session);
-
-        if (session.getStatus() == SessionStatus.COMPLETED) {
-            throw new SessionStateException("Impossible de soumettre : la session est terminée");
+        if (session.autoCompleteIfExpired(now())) {
+            sessionRepository.save(session);
+            log.info("Session auto-complétée (expiration) : id={}", session.getId());
         }
 
-        // Auto-démarrage si la session est encore en pending
-        if (session.getStatus() == SessionStatus.PENDING) {
-            session.setStatus(SessionStatus.IN_PROGRESS);
-            session.setStartedAt(OffsetDateTime.now());
-        }
+        session.ensureAcceptsAnswers(now());
 
         final var existingAnswer = answerRepository
                 .findBySessionIdAndQuestionId(session.getId(), request.questionId());
 
         if (existingAnswer.isPresent()) {
-            final var answer = existingAnswer.get();
-            answer.setCandidateAnswer(request.candidateAnswer());
-            answerRepository.save(answer);
+            existingAnswer.get().updateAnswer(request.candidateAnswer());
+            answerRepository.save(existingAnswer.get());
             log.debug("Réponse mise à jour : session={}, question={}", session.getId(), request.questionId());
         } else {
-            final var question = session.getQuizTemplate().getQuizQuestions().stream()
-                    .filter(link -> link.getQuestion().getId().equals(request.questionId()))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Question " + request.questionId() + " absente du quiz de cette session"))
-                    .getQuestion();
-
-            final var answer = new QuizSessionAnswer(session, question, request.candidateAnswer());
-            answerRepository.save(answer);
-            log.debug("Réponse enregistrée : session={}, question={}", session.getId(), request.questionId());
+            saveNewAnswer(session, request);
         }
     }
 
     /**
      * Termine une session : passe de IN_PROGRESS à COMPLETED.
-     * Le candidat clique sur "Terminer" ou le timer expire.
      */
     @Transactional
     public SessionDetailResponse completeSession(final String token) {
         final var session = findByTokenEagerOrThrow(token);
-
-        if (session.getStatus() != SessionStatus.IN_PROGRESS) {
-            throw new SessionStateException(
-                    "Impossible de terminer la session : état actuel = " + session.getStatus().getValue());
-        }
-
-        session.setStatus(SessionStatus.COMPLETED);
-        session.setCompletedAt(OffsetDateTime.now());
+        session.complete(now());
         sessionRepository.save(session);
 
         log.info("Session terminée : id={}", session.getId());
         return toSessionDetail(session);
     }
 
-    /**
-     * Auto-complète une session en cours si le temps imparti (durationMinutes du quiz) est dépassé.
-     * Permet une expiration serveur transparente, indépendante du timer côté client.
-     */
-    private void autoCompleteIfExpired(final QuizSession session) {
-        if (session.getStatus() != SessionStatus.IN_PROGRESS || session.getStartedAt() == null) {
-            return;
-        }
+    private void saveNewAnswer(final QuizSession session, final SubmitAnswerRequest request) {
+        final var question = session.getQuizTemplate().getQuizQuestions().stream()
+                .filter(link -> link.getQuestion().getId().equals(request.questionId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Question " + request.questionId() + " absente du quiz de cette session"))
+                .getQuestion();
 
-        final var durationMinutes = session.getQuizTemplate().getDurationMinutes();
-        final var deadline = session.getStartedAt().plusMinutes(durationMinutes);
+        final var answer = new QuizSessionAnswer(session, question, request.candidateAnswer(), now());
+        answerRepository.save(answer);
+        log.debug("Réponse enregistrée : session={}, question={}", session.getId(), request.questionId());
+    }
 
-        if (OffsetDateTime.now().isAfter(deadline)) {
-            session.setStatus(SessionStatus.COMPLETED);
-            session.setCompletedAt(deadline);
-            sessionRepository.save(session);
-            log.info("Session auto-complétée (expiration) : id={}", session.getId());
-        }
+    private OffsetDateTime now() {
+        return OffsetDateTime.now(clock);
     }
 
     private QuizSession findByTokenEagerOrThrow(final String token) {
@@ -220,7 +186,6 @@ public class QuizSessionService {
     private SessionDetailResponse toSessionDetail(final QuizSession session) {
         final var quiz = session.getQuizTemplate();
         final var answers = answerRepository.findBySessionId(session.getId());
-        final var isCompleted = session.getStatus() == SessionStatus.COMPLETED;
 
         // Pré-indexer les réponses par questionId (O(1) au lieu de O(N*M))
         final var answersByQuestionId = answers.stream()
@@ -242,7 +207,6 @@ public class QuizSessionService {
                     final var q = link.getQuestion();
                     final var candidateAnswer = answersByQuestionId.get(q.getId());
 
-                    // Masquer les réponses attendues tant que la session n'est pas terminée
                     return new SessionDetailResponse.SessionQuestionResponse(
                             q.getId(),
                             link.getPosition(),
@@ -250,8 +214,8 @@ public class QuizSessionService {
                             q.getTargetVersion(),
                             q.getSeniorityLevel(),
                             q.getQuestion(),
-                            isCompleted ? q.getAnswer() : null,
-                            isCompleted ? q.getExplanation() : null,
+                            session.isCompleted() ? q.getAnswer() : null,
+                            session.isCompleted() ? q.getExplanation() : null,
                             q.getDifficultyScore(),
                             q.getAnswerType().getValue(),
                             candidateAnswer

@@ -11,7 +11,6 @@ import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -28,27 +27,21 @@ public class QuizTemplate {
     private Integer id;
 
     @Column(nullable = false, length = 500)
-    @Setter
     private String title;
 
     @Column(columnDefinition = "text")
-    @Setter
     private String description;
 
     @Column(name = "target_seniority", nullable = false, length = 20)
-    @Setter
     private String targetSeniority;
 
     @Column(name = "duration_minutes", nullable = false)
-    @Setter
     private Integer durationMinutes;
 
     @Column(name = "created_by", nullable = false, length = 20)
-    @Setter
     private String createdBy;
 
     @Column(name = "source_offer_id")
-    @Setter
     private Integer sourceOfferId;
 
     @Column(name = "created_at", nullable = false)
@@ -61,13 +54,15 @@ public class QuizTemplate {
     public QuizTemplate(final String title,
                         final String description,
                         final String targetSeniority,
-                        final int durationMinutes) {
+                        final int durationMinutes,
+                        final String createdBy,
+                        final OffsetDateTime now) {
         this.title = title;
         this.description = description;
         this.targetSeniority = targetSeniority;
         this.durationMinutes = durationMinutes;
-        this.createdBy = "java-matcher";
-        this.createdAt = OffsetDateTime.now();
+        this.createdBy = createdBy;
+        this.createdAt = now;
     }
 
     public void addQuestion(final Question question, final short position) {

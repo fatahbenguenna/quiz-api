@@ -27,6 +27,7 @@ public class QuizPdfService {
     private static final Font HEADER_FONT = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.WHITE);
     private static final Font QUESTION_FONT = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11);
     private static final Font BODY_FONT = FontFactory.getFont(FontFactory.HELVETICA, 10);
+    private static final Font CODE_FONT = FontFactory.getFont(FontFactory.COURIER, 10);
     private static final Font LABEL_FONT = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.DARK_GRAY);
 
     private static final Color PRIMARY_COLOR = new Color(41, 98, 255);
@@ -83,43 +84,50 @@ public class QuizPdfService {
     }
 
     private void addQuestionBlock(final Document document, final QuizQuestionDto q) {
-        // En-tête de question avec numéro et technologie
         final var table = new PdfPTable(1);
         table.setWidthPercentage(100);
         table.setSpacingBefore(10);
 
+        table.addCell(buildQuestionHeader(q));
+        table.addCell(buildQuestionBody(q));
+        document.add(table);
+    }
+
+    private PdfPCell buildQuestionHeader(final QuizQuestionDto q) {
         final var versionSuffix = q.targetVersion() != null ? " " + q.targetVersion() : "";
-        final var headerText = String.format("Q%d — %s%s (%s)", q.position(), q.technology(), versionSuffix, q.seniorityLevel());
-        final var headerCell = new PdfPCell(new Phrase(headerText, HEADER_FONT));
-        headerCell.setBackgroundColor(PRIMARY_COLOR);
-        headerCell.setPadding(8);
-        headerCell.setBorderWidth(0);
-        table.addCell(headerCell);
+        final var headerText = String.format("Q%d — %s%s (%s)",
+                q.position(), q.technology(), versionSuffix, q.seniorityLevel());
 
-        // Corps : question
-        final var questionCell = new PdfPCell();
-        questionCell.setBorderWidth(0);
-        questionCell.setBackgroundColor(LIGHT_BG);
-        questionCell.setPadding(10);
+        final var cell = new PdfPCell(new Phrase(headerText, HEADER_FONT));
+        cell.setBackgroundColor(PRIMARY_COLOR);
+        cell.setPadding(8);
+        cell.setBorderWidth(0);
+        return cell;
+    }
 
-        questionCell.addElement(new Paragraph(q.question(), QUESTION_FONT));
+    private PdfPCell buildQuestionBody(final QuizQuestionDto q) {
+        final var cell = new PdfPCell();
+        cell.setBorderWidth(0);
+        cell.setBackgroundColor(LIGHT_BG);
+        cell.setPadding(10);
 
-        // Réponse
+        cell.addElement(new Paragraph(q.question(), QUESTION_FONT));
+
+        final var answerFont = "code".equals(q.answerType()) ? CODE_FONT : BODY_FONT;
+
         final var answerLabel = new Paragraph("Réponse attendue :", LABEL_FONT);
         answerLabel.setSpacingBefore(8);
-        questionCell.addElement(answerLabel);
-        questionCell.addElement(new Paragraph(q.answer(), BODY_FONT));
+        cell.addElement(answerLabel);
+        cell.addElement(new Paragraph(q.answer(), answerFont));
 
-        // Explication (si présente)
         if (q.explanation() != null && !q.explanation().isBlank()) {
             final var explLabel = new Paragraph("Explication :", LABEL_FONT);
             explLabel.setSpacingBefore(6);
-            questionCell.addElement(explLabel);
-            questionCell.addElement(new Paragraph(q.explanation(), BODY_FONT));
+            cell.addElement(explLabel);
+            cell.addElement(new Paragraph(q.explanation(), BODY_FONT));
         }
 
-        table.addCell(questionCell);
-        document.add(table);
+        return cell;
     }
 
     private void addFooter(final Document document, final QuizResponse quiz) {

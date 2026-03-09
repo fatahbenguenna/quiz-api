@@ -6,31 +6,45 @@ import com.saii.quizapi.dto.QuizResponse;
 import com.saii.quizapi.dto.TechPrerequisite;
 import com.saii.quizapi.entity.Question;
 import com.saii.quizapi.entity.QuizTemplate;
-import com.saii.quizapi.entity.Technology;
 import com.saii.quizapi.repository.QuestionRepository;
 import com.saii.quizapi.repository.QuizTemplateRepository;
 import com.saii.quizapi.repository.SeniorityLevelRepository;
 import com.saii.quizapi.repository.TechnologyRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class QuizMatcherService {
 
+    static final String CREATED_BY_MATCHER = "java-matcher";
+    static final String DEFAULT_SENIORITY = "confirme";
     private static final int DEFAULT_DURATION_MINUTES = 30;
 
     private final TechnologyRepository technologyRepository;
     private final QuestionRepository questionRepository;
     private final QuizTemplateRepository quizTemplateRepository;
     private final SeniorityLevelRepository seniorityLevelRepository;
+    private final Clock clock;
+
+    public QuizMatcherService(final TechnologyRepository technologyRepository,
+                              final QuestionRepository questionRepository,
+                              final QuizTemplateRepository quizTemplateRepository,
+                              final SeniorityLevelRepository seniorityLevelRepository,
+                              final Clock clock) {
+        this.technologyRepository = technologyRepository;
+        this.questionRepository = questionRepository;
+        this.quizTemplateRepository = quizTemplateRepository;
+        this.seniorityLevelRepository = seniorityLevelRepository;
+        this.clock = clock;
+    }
 
     /**
      * Récupère un quiz existant par son ID et le convertit en DTO.
@@ -62,7 +76,9 @@ public class QuizMatcherService {
                 request.jobTitle(),
                 "Quiz assemblé automatiquement par le matcher Java",
                 targetSeniority,
-                DEFAULT_DURATION_MINUTES
+                DEFAULT_DURATION_MINUTES,
+                CREATED_BY_MATCHER,
+                OffsetDateTime.now(clock)
         );
 
         short position = 1;
@@ -121,7 +137,7 @@ public class QuizMatcherService {
                         .orElse(new RankedSeniority(code, (short) 0)))
                 .max((a, b) -> Short.compare(a.rank(), b.rank()))
                 .map(RankedSeniority::code)
-                .orElse("confirme");
+                .orElse(DEFAULT_SENIORITY);
     }
 
     private QuizResponse toQuizResponse(final QuizTemplate quiz) {

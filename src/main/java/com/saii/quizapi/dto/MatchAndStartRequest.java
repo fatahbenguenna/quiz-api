@@ -13,6 +13,10 @@ import java.util.List;
  * Requête combinée : matching de quiz + création de session candidat.
  * Le progiciel RH envoie les prérequis de l'offre et les infos du candidat
  * en un seul appel, et reçoit directement l'URL de la session.
+ * <p>
+ * Les champs de matching (jobTitle, prerequisites, maxQuestions) sont dupliqués
+ * volontairement (limitations des records + validation Jakarta).
+ * La méthode {@link #toMatchRequest()} fournit la conversion sans duplication de logique.
  */
 public record MatchAndStartRequest(
         @NotBlank @Size(max = 500) String jobTitle,
@@ -21,9 +25,11 @@ public record MatchAndStartRequest(
         @NotBlank @Size(max = 255) String candidateName,
         @NotBlank @Email @Size(max = 255) String candidateEmail
 ) {
-    private static final int DEFAULT_MAX_QUESTIONS = 20;
-
-    public int effectiveMaxQuestions() {
-        return maxQuestions != null ? maxQuestions : DEFAULT_MAX_QUESTIONS;
+    /**
+     * Convertit la partie matching en {@link MatchRequest},
+     * évitant la duplication de logique (effectiveMaxQuestions, etc.).
+     */
+    public MatchRequest toMatchRequest() {
+        return new MatchRequest(jobTitle, prerequisites, maxQuestions);
     }
 }

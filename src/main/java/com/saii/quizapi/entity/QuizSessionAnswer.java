@@ -11,7 +11,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.time.OffsetDateTime;
 
@@ -34,7 +33,6 @@ public class QuizSessionAnswer {
     private Question question;
 
     @Column(name = "candidate_answer", columnDefinition = "text")
-    @Setter
     private String candidateAnswer;
 
     @Column(name = "submitted_at", nullable = false)
@@ -42,10 +40,15 @@ public class QuizSessionAnswer {
 
     public QuizSessionAnswer(final QuizSession session,
                              final Question question,
-                             final String candidateAnswer) {
+                             final String candidateAnswer,
+                             final OffsetDateTime now) {
         this.session = session;
         this.question = question;
         this.candidateAnswer = candidateAnswer;
-        this.submittedAt = OffsetDateTime.now();
+        this.submittedAt = now;
+    }
+
+    public void updateAnswer(final String candidateAnswer) {
+        this.candidateAnswer = candidateAnswer;
     }
 }

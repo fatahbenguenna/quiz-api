@@ -7,15 +7,17 @@ import com.saii.quizapi.repository.QuestionRepository;
 import com.saii.quizapi.repository.QuizTemplateRepository;
 import com.saii.quizapi.repository.SeniorityLevelRepository;
 import com.saii.quizapi.repository.TechnologyRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 
+import static com.saii.quizapi.TestFixtures.TEST_NOW;
 import static com.saii.quizapi.TestFixtures.createQuestion;
 import static com.saii.quizapi.TestFixtures.createSeniorityLevel;
 import static com.saii.quizapi.TestFixtures.createTechnology;
@@ -40,8 +42,15 @@ class QuizMatcherServiceTest {
     @Mock
     private SeniorityLevelRepository seniorityLevelRepository;
 
-    @InjectMocks
     private QuizMatcherService service;
+
+    @BeforeEach
+    void setUp() {
+        final var fixedClock = Clock.fixed(TEST_NOW.toInstant(), TEST_NOW.getOffset());
+        service = new QuizMatcherService(
+                technologyRepository, questionRepository,
+                quizTemplateRepository, seniorityLevelRepository, fixedClock);
+    }
 
     @Test
     void should_throw_when_no_questions_found() {
@@ -85,7 +94,7 @@ class QuizMatcherServiceTest {
         assertThat(result.id()).isEqualTo(42);
         assertThat(result.title()).isEqualTo("Dev Java Confirmé");
         assertThat(result.targetSeniority()).isEqualTo("confirme");
-        assertThat(result.createdBy()).isEqualTo("java-matcher");
+        assertThat(result.createdBy()).isEqualTo(QuizMatcherService.CREATED_BY_MATCHER);
         assertThat(result.questions()).hasSize(1);
         assertThat(result.questions().getFirst().question()).isEqualTo("Qu'est-ce que le polymorphisme ?");
         assertThat(result.questions().getFirst().answerType()).isEqualTo("code");
