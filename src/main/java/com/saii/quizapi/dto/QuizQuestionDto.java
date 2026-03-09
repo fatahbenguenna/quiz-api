@@ -11,6 +11,7 @@ public record QuizQuestionDto(
         String question,
         String answer,
         String explanation,
-        short difficultyScore
+        short difficultyScore,
+        String answerType
 ) {
 }

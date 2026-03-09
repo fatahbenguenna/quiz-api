@@ -31,6 +31,7 @@ public final class TestFixtures {
         setField(q, "answer", "Réponse de test");
         setField(q, "difficultyScore", (short) 3);
         setField(q, "targetVersion", null);
+        setField(q, "answerType", "code");
         return q;
     }
 
@@ -38,6 +39,15 @@ public final class TestFixtures {
                                                final String seniority, final String questionText,
                                                final String answer, final String explanation,
                                                final short difficulty, final String targetVersion) {
+        return createQuestionFull(id, tech, seniority, questionText, answer, explanation,
+                difficulty, targetVersion, "code");
+    }
+
+    public static Question createQuestionFull(final int id, final Technology tech,
+                                               final String seniority, final String questionText,
+                                               final String answer, final String explanation,
+                                               final short difficulty, final String targetVersion,
+                                               final String answerType) {
         final var q = new Question();
         setField(q, "id", id);
         setField(q, "technology", tech);
@@ -47,6 +57,7 @@ public final class TestFixtures {
         setField(q, "explanation", explanation);
         setField(q, "difficultyScore", difficulty);
         setField(q, "targetVersion", targetVersion);
+        setField(q, "answerType", answerType);
         return q;
     }
 

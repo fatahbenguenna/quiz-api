@@ -43,6 +43,9 @@ public class Question {
     @Column(name = "difficulty_score", nullable = false)
     private Short difficultyScore;
 
+    @Column(name = "answer_type", nullable = false, length = 10)
+    private String answerType;
+
     @Column(name = "target_version", length = 50)
     private String targetVersion;
 

@@ -37,6 +37,7 @@ public record SessionDetailResponse(
             String expectedAnswer,
             String explanation,
             short difficultyScore,
+            String answerType,
             String candidateAnswer
     ) {
     }

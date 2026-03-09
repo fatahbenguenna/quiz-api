@@ -30,14 +30,16 @@ class QuizPdfServiceTest {
                                 "Qu'est-ce que le polymorphisme ?",
                                 "Le polymorphisme permet à un objet de prendre plusieurs formes.",
                                 "Concept fondamental de la POO.",
-                                (short) 3
+                                (short) 3,
+                                "code"
                         ),
                         new QuizQuestionDto(
                                 2, "Spring Boot", "confirme", "3.2",
                                 "Quel est le rôle de @SpringBootApplication ?",
                                 "Combine @Configuration, @EnableAutoConfiguration et @ComponentScan.",
                                 null,
-                                (short) 2
+                                (short) 2,
+                                "text"
                         )
                 )
         );

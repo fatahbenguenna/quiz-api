@@ -253,6 +253,7 @@ public class QuizSessionService {
                             isCompleted ? q.getAnswer() : null,
                             isCompleted ? q.getExplanation() : null,
                             q.getDifficultyScore(),
+                            q.getAnswerType(),
                             candidateAnswer
                     );
                 })
