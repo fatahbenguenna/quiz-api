@@ -88,6 +88,7 @@ class QuizMatcherServiceTest {
         assertThat(result.createdBy()).isEqualTo("java-matcher");
         assertThat(result.questions()).hasSize(1);
         assertThat(result.questions().getFirst().question()).isEqualTo("Qu'est-ce que le polymorphisme ?");
+        assertThat(result.questions().getFirst().answerType()).isEqualTo("code");
     }
 
     @Test

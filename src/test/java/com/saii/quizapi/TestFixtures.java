@@ -1,5 +1,6 @@
 package com.saii.quizapi;
 
+import com.saii.quizapi.entity.AnswerType;
 import com.saii.quizapi.entity.Question;
 import com.saii.quizapi.entity.QuizTemplate;
 import com.saii.quizapi.entity.SeniorityLevel;
@@ -31,7 +32,7 @@ public final class TestFixtures {
         setField(q, "answer", "Réponse de test");
         setField(q, "difficultyScore", (short) 3);
         setField(q, "targetVersion", null);
-        setField(q, "answerType", "code");
+        setField(q, "answerType", AnswerType.CODE);
         return q;
     }
 
@@ -40,14 +41,14 @@ public final class TestFixtures {
                                                final String answer, final String explanation,
                                                final short difficulty, final String targetVersion) {
         return createQuestionFull(id, tech, seniority, questionText, answer, explanation,
-                difficulty, targetVersion, "code");
+                difficulty, targetVersion, AnswerType.CODE);
     }
 
     public static Question createQuestionFull(final int id, final Technology tech,
                                                final String seniority, final String questionText,
                                                final String answer, final String explanation,
                                                final short difficulty, final String targetVersion,
-                                               final String answerType) {
+                                               final AnswerType answerType) {
         final var q = new Question();
         setField(q, "id", id);
         setField(q, "technology", tech);

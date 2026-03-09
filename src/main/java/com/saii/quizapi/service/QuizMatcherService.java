@@ -137,7 +137,7 @@ public class QuizMatcherService {
                             q.getAnswer(),
                             q.getExplanation(),
                             q.getDifficultyScore(),
-                            q.getAnswerType()
+                            q.getAnswerType().getValue()
                     );
                 })
                 .toList();

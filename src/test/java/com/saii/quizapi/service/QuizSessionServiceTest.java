@@ -240,6 +240,7 @@ class QuizSessionServiceTest {
         assertThat(questionDetail.candidateAnswer()).isEqualTo("Ma réponse sealed");
         assertThat(questionDetail.technology()).isEqualTo("Java");
         assertThat(questionDetail.targetVersion()).isEqualTo("21");
+        assertThat(questionDetail.answerType()).isEqualTo("code");
         // Les réponses attendues sont masquées tant que la session n'est pas terminée
         assertThat(questionDetail.expectedAnswer()).isNull();
         assertThat(questionDetail.explanation()).isNull();

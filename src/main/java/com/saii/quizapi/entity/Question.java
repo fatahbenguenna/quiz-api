@@ -44,7 +44,7 @@ public class Question {
     private Short difficultyScore;
 
     @Column(name = "answer_type", nullable = false, length = 10)
-    private String answerType;
+    private AnswerType answerType;
 
     @Column(name = "target_version", length = 50)
     private String targetVersion;
