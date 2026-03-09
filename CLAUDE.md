@@ -89,6 +89,23 @@ Variables d'environnement (avec valeurs par défaut pour le dev) :
 | `QUIZ_APP_BASE_URL` | URL de base pour les liens session | `http://localhost:4200` |
 | `RATE_LIMIT_PER_MINUTE` | Rate limit applicatif | `60` |
 
+## Module `quiz-client/` (TypeScript)
+
+Snippet Angular prêt à copier dans une application tierce pour générer des PDF de quiz via l'API.
+
+- **`quiz-pdf.service.ts`** — Service Angular (`QuizPdfService`) qui parse les données brutes du progiciel RH (prérequis séparés par `;`, séniorité au format `Niveau X (Label)`) et appelle `POST /api/quiz/match/pdf`
+- **`index.ts`** — Barrel export
+- **`quiz-pdf.service.spec.ts`** — Tests unitaires des fonctions de parsing
+
+Utilisation depuis une application Angular :
+```typescript
+quizPdfService.generateAndOpen(
+  'Dev Java Senior',
+  'Java 11;Spring Boot 2.1;Angular 8',
+  'Niveau 2 (Confirmé)',
+);
+```
+
 ## Points d'attention
 
 - Le schéma PostgreSQL est géré **exclusivement** par Drizzle (CLI TypeScript) — ne jamais ajouter `ddl-auto: create/update`
