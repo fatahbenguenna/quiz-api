@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,6 +44,16 @@ public class QuizSessionService {
         this.matcherService = matcherService;
         this.clock = clock;
         this.quizAppBaseUrl = quizAppBaseUrl;
+    }
+
+    /**
+     * Liste toutes les sessions, triées par date de création décroissante.
+     */
+    @Transactional(readOnly = true)
+    public List<SessionResponseDTO> listSessions() {
+        return sessionRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(this::toSessionResponseDTO)
+                .toList();
     }
 
     /**
