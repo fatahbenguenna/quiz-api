@@ -2,9 +2,11 @@ package com.saii.quizapi;
 
 import com.saii.quizapi.entity.AnswerType;
 import com.saii.quizapi.entity.Question;
+import com.saii.quizapi.entity.QuestionCsv;
 import com.saii.quizapi.entity.QuizTemplate;
 import com.saii.quizapi.entity.SeniorityLevel;
 import com.saii.quizapi.entity.Technology;
+import com.saii.quizapi.entity.TechnologyCsv;
 
 import java.time.OffsetDateTime;
 
@@ -64,6 +66,27 @@ public final class TestFixtures {
                 durationMinutes, "test-runner", TEST_NOW);
         setField(qt, "id", id);
         return qt;
+    }
+
+    public static TechnologyCsv createTechnologyCsv(final int id, final String name) {
+        final var tech = new TechnologyCsv();
+        setField(tech, "id", id);
+        setField(tech, "name", name);
+        return tech;
+    }
+
+    public static QuestionCsv createQuestionCsv(final int id, final TechnologyCsv tech,
+                                                  final String seniority, final String questionText) {
+        final var q = new QuestionCsv();
+        setField(q, "id", id);
+        setField(q, "technology", tech);
+        setField(q, "seniorityLevel", seniority);
+        setField(q, "question", questionText);
+        setField(q, "answer", "Réponse de test");
+        setField(q, "explanation", "Explication de test");
+        setField(q, "difficultyScore", (short) 5);
+        setField(q, "generatedBy", "ai");
+        return q;
     }
 
     /**
