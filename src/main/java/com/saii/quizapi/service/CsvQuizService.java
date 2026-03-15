@@ -14,8 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Service pour assembler un quiz à la volée depuis les tables CSV.
@@ -41,26 +43,27 @@ public class CsvQuizService {
     }
 
     /**
-     * Assemble un quiz éphémère à partir d'une liste de technologies (texte brut) et d'un niveau de séniorité.
+     * Assemble un quiz éphémère à partir d'un texte brut de technologies et d'un niveau de séniorité.
+     * Découvre automatiquement les technologies présentes dans le texte (avec ou sans séparateurs).
      * Sélectionne 3 questions par technologie trouvée dans les tables CSV.
      *
      * @throws QuizNotFoundException si aucune question n'est trouvée
      */
     @Transactional(readOnly = true)
     public QuizResponseDTO assembleFromCsv(final CsvQuizRequestDTO request) {
-        final var techNames = parseTechnologyNames(request.technologies());
-        final var resolvedTechs = resolveTechnologies(techNames);
+        final var resolvedTechs = discoverTechnologies(request.technologies());
 
         if (resolvedTechs.isEmpty()) {
-            log.warn("Aucune technologie CSV trouvée pour : {}", techNames);
+            log.warn("Aucune technologie CSV trouvée dans le texte : '{}'", request.technologies());
             throw new QuizNotFoundException("Aucune technologie trouvée dans la base CSV pour : " + request.technologies());
         }
+
+        log.info("Technologies découvertes : {}", resolvedTechs.stream().map(TechnologyCsv::getName).toList());
 
         final var techIds = resolvedTechs.stream().map(TechnologyCsv::getId).toList();
         final var allQuestions = questionCsvRepository.findByTechnologyIdsAndSeniority(techIds, request.seniority());
 
         if (allQuestions.isEmpty()) {
-            // Fallback : essayer toutes les questions sans filtre de séniorité
             final var fallbackQuestions = collectFallbackQuestions(techIds);
             if (fallbackQuestions.isEmpty()) {
                 throw new QuizNotFoundException(
@@ -73,31 +76,50 @@ public class CsvQuizService {
     }
 
     /**
-     * Parse le texte brut de technologies en liste de noms nettoyés.
+     * Découvre les technologies présentes dans un texte brut.
+     * <p>
+     * Stratégie : charge toutes les technologies CSV connues, les trie par longueur de nom
+     * décroissante (pour matcher "Spring Boot" avant "Spring"), puis cherche chaque nom
+     * dans le texte (case-insensitive). Chaque match consomme la portion correspondante
+     * du texte pour éviter les sous-matchs.
+     * </p>
+     *
+     * @param rawText texte brut avec des noms de technologies (avec ou sans séparateurs)
+     * @return liste ordonnée et dédupliquée des technologies trouvées
      */
-    List<String> parseTechnologyNames(final String rawText) {
-        return Arrays.stream(rawText.split("[,;]"))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
+    List<TechnologyCsv> discoverTechnologies(final String rawText) {
+        final var allTechs = technologyCsvRepository.findAll();
+
+        // Trier par longueur de nom décroissante pour prioriser les matchs longs
+        final var sortedByLength = allTechs.stream()
+                .sorted(Comparator.comparingInt((TechnologyCsv t) -> t.getName().length()).reversed())
                 .toList();
-    }
 
-    /**
-     * Résout les technologies par nom exact (case-insensitive).
-     */
-    private List<TechnologyCsv> resolveTechnologies(final List<String> techNames) {
-        final var result = new ArrayList<TechnologyCsv>();
+        // Texte de travail mutable pour consommer les matchs
+        var workingText = rawText;
+        final var found = new LinkedHashSet<TechnologyCsv>();
 
-        for (final var name : techNames) {
-            final var techOpt = technologyCsvRepository.findByNameIgnoreCase(name);
-            if (techOpt.isPresent()) {
-                result.add(techOpt.get());
-            } else {
-                log.debug("Technologie CSV non trouvée : '{}'", name);
+        for (final var tech : sortedByLength) {
+            final var pattern = buildPattern(tech.getName());
+            final var matcher = pattern.matcher(workingText);
+
+            if (matcher.find()) {
+                found.add(tech);
+                // Remplacer le match par des espaces pour éviter les sous-matchs
+                workingText = matcher.replaceAll(" ".repeat(tech.getName().length()));
             }
         }
 
-        return result;
+        return new ArrayList<>(found);
+    }
+
+    /**
+     * Construit un pattern regex case-insensitive pour un nom de technologie.
+     * Échappe les caractères spéciaux regex (ex: C++, C#, .NET).
+     */
+    private Pattern buildPattern(final String techName) {
+        final var escaped = Pattern.quote(techName);
+        return Pattern.compile(escaped, Pattern.CASE_INSENSITIVE);
     }
 
     /**
@@ -113,7 +135,7 @@ public class CsvQuizService {
 
     /**
      * Construit le DTO de quiz à partir des questions collectées.
-     * Sélectionne exactement QUESTIONS_PER_TECHNOLOGY questions par technologie (round-robin).
+     * Sélectionne exactement QUESTIONS_PER_TECHNOLOGY questions par technologie.
      */
     private QuizResponseDTO buildQuizResponse(final List<TechnologyCsv> technologies,
                                               final List<QuestionCsv> allQuestions,
