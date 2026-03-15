@@ -4,9 +4,12 @@ import com.saii.quizapi.entity.QuizSession;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface QuizSessionRepository extends JpaRepository<QuizSession, Integer> {
+
+    List<QuizSession> findAllByOrderByCreatedAtDesc();
 
     Optional<QuizSession> findByToken(String token);
 

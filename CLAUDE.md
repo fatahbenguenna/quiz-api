@@ -56,7 +56,7 @@ Organisation en couches classiques, **sans architecture hexagonale** actuellemen
 
 ### Sécurité — Deux zones
 
-- **Zone protégée (API key Bearer)** : `POST /api/sessions`, `/api/quiz/**` — pour le progiciel RH
+- **Zone protégée (API key Bearer)** : `GET /api/sessions` (listing), `POST /api/sessions`, `/api/quiz/**` — pour le progiciel RH et l'admin quiz-app
 - **Zone publique (token UUID)** : `GET/POST /api/sessions/{token}/*` — pour les candidats
 
 ### Sessions candidat — Machine à états

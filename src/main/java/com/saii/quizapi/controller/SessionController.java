@@ -16,12 +16,23 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/sessions")
 @RequiredArgsConstructor
 public class SessionController {
 
     private final QuizSessionService sessionService;
+
+    /**
+     * GET /api/sessions — Liste toutes les sessions (protégé par clé API).
+     * Utilisé par l'interface admin pour visualiser l'état des sessions.
+     */
+    @GetMapping
+    public ResponseEntity<List<SessionResponseDTO>> listSessions() {
+        return ResponseEntity.ok(sessionService.listSessions());
+    }
 
     /**
      * POST /api/sessions — Crée une session de quiz pour un candidat.

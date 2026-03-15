@@ -64,7 +64,7 @@ quiz-api/
 │   │   ├── TechnologyRepository.java          # findByNameOrAlias (requete native text[])
 │   │   ├── QuestionRepository.java            # findByTechnologyIdAndSeniorityLevel
 │   │   ├── QuizTemplateRepository.java
-│   │   ├── QuizSessionRepository.java         # findByToken
+│   │   ├── QuizSessionRepository.java         # findByToken, findAllByOrderByCreatedAtDesc
 │   │   └── QuizSessionAnswerRepository.java   # findBySessionIdAndQuestionId
 │   ├── dto/
 │   │   ├── TechPrerequisite.java              # record(technology, seniority)
@@ -89,7 +89,7 @@ quiz-api/
 │   │   └── ApiKeyAuthFilter.java              # Filtre Bearer API key
 │   └── controller/
 │       ├── QuizController.java                # Endpoints quiz + match + match/session
-│       ├── SessionController.java             # Endpoints sessions candidat
+│       ├── SessionController.java             # Endpoints sessions (admin listing + candidat)
 │       └── GlobalExceptionHandler.java        # Gestion des erreurs (RFC 7807)
 └── src/test/java/com/saii/quizapi/
     ├── TestFixtures.java                      # Helpers partages (setField, create*)
@@ -125,8 +125,9 @@ JAVA_HOME=$(/usr/libexec/java_home -v 21) mvn test
 # 4. Demarrer le serveur (port 8080)
 JAVA_HOME=$(/usr/libexec/java_home -v 21) mvn spring-boot:run
 
-# 5. Verifier
-curl http://localhost:8080/api/quiz/1
+# 5. Verifier (necessite la cle API)
+curl http://localhost:8080/api/quiz/1 \
+  -H 'Authorization: Bearer dev-api-key-change-me'
 ```
 
 ### Configuration (`application.yml`)
@@ -161,7 +162,7 @@ saii:
 
 ### Securite — Authentification API key
 
-Les endpoints d'administration (`POST /api/sessions`, `/api/quiz/*`) sont proteges par une **cle API Bearer**.
+Les endpoints d'administration (`GET /api/sessions`, `POST /api/sessions`, `/api/quiz/*`) sont proteges par une **cle API Bearer**.
 Les endpoints candidat (`GET/POST /api/sessions/{token}/*`) sont publics (le token UUID fait office d'auth).
 
 ```bash
@@ -189,7 +190,8 @@ Spring Security ajoute automatiquement les headers de securite (X-Content-Type-O
 Retourne un quiz existant avec toutes ses questions.
 
 ```bash
-curl http://localhost:8080/api/quiz/1
+curl http://localhost:8080/api/quiz/1 \
+  -H 'Authorization: Bearer dev-api-key-change-me'
 ```
 
 Reponse :
@@ -231,11 +233,9 @@ Retourne un PDF (`Content-Type: application/pdf`) avec `Content-Disposition: inl
 Le frontend Angular peut l'afficher directement dans un `<iframe>` ou un viewer PDF.
 
 ```bash
-# Ouvrir dans le navigateur ou telecharger
-curl -o quiz-1.pdf http://localhost:8080/api/quiz/1/pdf
-
-# Ou dans le navigateur directement
-open http://localhost:8080/api/quiz/1/pdf
+# Telecharger le PDF (necessite la cle API)
+curl -o quiz-1.pdf http://localhost:8080/api/quiz/1/pdf \
+  -H 'Authorization: Bearer dev-api-key-change-me'
 ```
 
 Le PDF contient :
@@ -251,6 +251,7 @@ L'API assemble un nouveau quiz a partir des questions disponibles en base.
 
 ```bash
 curl -X POST http://localhost:8080/api/quiz/match \
+  -H 'Authorization: Bearer dev-api-key-change-me' \
   -H 'Content-Type: application/json' \
   -d '{
     "jobTitle": "Developpeur Java/Spring Senior",
@@ -288,6 +289,7 @@ Meme logique que `/match` mais retourne le PDF au lieu du JSON.
 
 ```bash
 curl -X POST http://localhost:8080/api/quiz/match/pdf \
+  -H 'Authorization: Bearer dev-api-key-change-me' \
   -H 'Content-Type: application/json' \
   -d '{
     "jobTitle": "DevOps Senior",
@@ -306,6 +308,7 @@ L'API assemble le quiz, cree une session avec un token UUID, et retourne l'URL q
 
 ```bash
 curl -X POST http://localhost:8080/api/quiz/match/session \
+  -H 'Authorization: Bearer dev-api-key-change-me' \
   -H 'Content-Type: application/json' \
   -d '{
     "jobTitle": "Dev Java/Spring Senior",
@@ -338,6 +341,32 @@ Le `sessionUrl` est directement invocable : le progiciel RH l'affiche comme lien
 ---
 
 ### API Sessions — Cycle de vie du quiz candidat
+
+#### `GET /api/sessions` — Lister toutes les sessions (admin)
+
+Retourne la liste de toutes les sessions, triees par date de creation decroissante.
+Utilise par le tableau de bord admin de la quiz-app.
+
+```bash
+curl http://localhost:8080/api/sessions \
+  -H 'Authorization: Bearer dev-api-key-change-me'
+```
+
+Reponse :
+```json
+[
+  {
+    "id": 1,
+    "token": "a1b2c3d4-e5f6-...",
+    "sessionUrl": "http://localhost:4200/session/a1b2c3d4-e5f6-...",
+    "quizId": 42,
+    "quizTitle": "Dev Java Senior",
+    "candidateName": "Alice Dupont",
+    "status": "pending",
+    "createdAt": "2026-03-07T08:30:00+01:00"
+  }
+]
+```
 
 #### `POST /api/sessions` — Creer une session pour un quiz existant
 
@@ -784,12 +813,10 @@ SAII_API_KEY=ma-cle-api-secrete
 ## Quiz App — Application standalone
 
 L'application `quiz-app` (dossier `saii/quiz-app/`) est une **SPA Angular 21 autonome** avec Monaco Editor.
-Elle permet aux candidats de passer un quiz technique interactif avec :
+Elle offre deux interfaces :
 
-- Editeur de code avec **coloration syntaxique** et **auto-completion** (Monaco Editor)
-- **Timer** avec compte a rebours
-- **Sauvegarde automatique** des reponses entre les questions
-- **Vue review** pour l'interviewer avec les reponses attendues cote a cote
+- **Tableau de bord admin** (`/`) — connexion par cle API, liste de toutes les sessions avec statut, lien direct vers chaque session
+- **Interface candidat** (`/session/:token`) — editeur de code Monaco, timer, sauvegarde automatique, vue review
 
 ### Flux d'utilisation
 
@@ -856,13 +883,19 @@ quiz-app/
 │   └── app/
 │       ├── app.ts                         # Composant racine (router-outlet)
 │       ├── app.config.ts                  # Providers (HttpClient, Router)
-│       ├── app.routes.ts                  # Route : /session/:token
+│       ├── app.routes.ts                  # Routes : / (admin), /session/:token (candidat)
 │       ├── services/
-│       │   └── session.service.ts         # Client HTTP pour l'API sessions
+│       │   └── session.service.ts         # Client HTTP (listing admin + candidat)
 │       ├── components/
-│       │   └── code-editor/
-│       │       └── code-editor.component.ts  # Wrapper Monaco Editor
+│       │   ├── code-editor/
+│       │   │   └── code-editor.component.ts  # Wrapper Monaco Editor
+│       │   └── text-answer/
+│       │       └── text-answer.component.ts  # Textarea pour questions texte
 │       └── pages/
+│           ├── admin/
+│           │   ├── admin.component.ts     # Tableau de bord admin
+│           │   ├── admin.component.html
+│           │   └── admin.component.scss
 │           └── session/
 │               ├── session.component.ts   # Orchestrateur (landing/quiz/review)
 │               ├── session.component.html # Template avec 3 vues
